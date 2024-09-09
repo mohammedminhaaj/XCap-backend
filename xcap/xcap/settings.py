@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'user.apps.UserConfig',
+    'file.apps.FileConfig',
 ]
 
 MIDDLEWARE = [
@@ -134,3 +135,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 80 * 1024 * 1024
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+#CELERY SETTINGS
+
+CELERY_TIMEZONE = "UTC"
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = 'django-db'

@@ -1,10 +1,11 @@
+from rest_framework.fields import empty
 from rest_framework.serializers import Serializer, CharField, EmailField, ModelSerializer
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from xcap.utils import SERVER_ERROR_MESSAGE
-import random
+from rest_framework.exceptions import ValidationError
 import secrets
 
 
@@ -29,7 +30,7 @@ class CredentialManager():
 
     def get_token_response(self, user):
         """
-        Generate an authentication token for the user and return a response structure.
+        Generate an authentication token for the user and return a response.
         """
         token, _ = Token.objects.get_or_create(user=user)
         return {"auth_token": token.key}
@@ -37,7 +38,7 @@ class CredentialManager():
 
 class LoginSerializer(Serializer, CredentialManager):
     username = CharField(min_length=6, max_length=128)
-    password = CharField(min_length=6, max_length=128)
+    password = CharField(min_length=6, max_length=128, write_only=True)
     """
     Serializer for user login, inheriting from Serializer and CredentialManager.
     """
@@ -69,11 +70,11 @@ class SignupSerializer(ModelSerializer, CredentialManager):
         user.save()
 
         return self.get_token_response(user)
-        
+
 
 class ForgotPasswordSerializer(Serializer):
     """
-    Serializer for handling forgotten password requests via email.
+    Serializer for handling forgotten password requests.
     """
     username = CharField(min_length=6, max_length=128)
     email = EmailField()
@@ -86,3 +87,29 @@ class ForgotPasswordSerializer(Serializer):
         user.save(update_fields=["password"])
         print(f"Password for {user.username} is {password}")
         return user
+
+
+class ChangeEmailSerializer(ModelSerializer):
+    """Serializer for email change requests"""
+    class Meta:
+        model = User
+        fields = ["email"]
+
+
+class ChangePasswordSerializer(Serializer):
+    """Serializer for change password requests"""
+    old_password = CharField(min_length=6, max_length=128, write_only=True)
+    new_password = CharField(min_length=6, max_length=128, write_only=True)
+
+    def validate_old_password(self, value):
+        """Function to validate if the old password matches the new one"""
+        if not check_password(value, self.instance.password):
+            raise ValidationError("Old password is incorrect")
+        return value
+
+    def save(self, **kwargs):
+        """Set the new password if validation is successful"""
+        new_password = self.validated_data['new_password']
+        self.instance.set_password(new_password)
+        self.instance.save()
+        return self.instance
