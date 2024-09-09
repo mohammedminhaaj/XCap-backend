@@ -49,6 +49,6 @@ class FileUploadSerializer(Serializer):
         # Bulk creating to save additional queries
         files = File.objects.bulk_create(files_obj)
         # Async execution using celery
-        process_xml.delay(files)
+        process_xml.delay([file.id for file in files])
         
         return files

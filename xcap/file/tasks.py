@@ -5,17 +5,13 @@ from django.core.files.base import ContentFile
 from celery import shared_task
 
 @shared_task
-def process_xml(files: list[File]):
+def process_xml(file_id_list: list[int]):
     """ Function to process XML file """
-    # Put the files in processing stage and set the processing start time
-    for file in files:
-        file.status = 'PROCESSING'
-        file.processing_start_time = timezone.now()
 
-    # Bulk update the files
-    File.objects.bulk_update(
-        files, ['status', 'processing_start_time']
-    )
+    # Fetch all the files using the file ids
+    files = File.objects.filter(id__in = file_id_list)
+    # Put the files in processing stage and set the processing start time
+    files.update(status='PROCESSING', processing_start_time=timezone.now())
 
     # Initialize lists for bulk update
     processed_files = []
